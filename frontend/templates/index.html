@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Web Scraper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+
+    <h1>Submit URL</h1>
+
+    <form method="POST">
+
+        <label for="url">Target URL</label><br>
+        <input type="text" id="url" name="url" placeholder="http(s)://target-website.com" required />
+        <br><br>
+
+        <label for="depth">Crawl Depth</label><br>
+        <input type="number" id="depth" name="depth" min="1" value="1" required />
+        <br><br>
+
+        <input type="submit" name="submit" value="Submit">
+    </form>
+
+    {% if job_id %}
+        <p>Job ID: {{ job_id }}</p>
+        <form method="POST">
+            <input type="hidden" name="job_id" value="{{ job_id }}">
+            <input type="submit" name="check" value="Check Status">
+        </form>
+    {% endif %}
+
+    {% if content %}
+        <pre>{{ content }}</pre>
+    {% endif %}
+
+    <h2>Search</h2>
+    <form method="POST">
+        <input type="text" name="search_query" placeholder="Search content..." required>
+        <br><br>
+        <label>
+            <input type="checkbox" name="match_whole_word"> Match whole word
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="match_case"> Match case
+        </label>
+        <br>
+        <label>
+            <input type="checkbox" name="use_reg_exp"> Use regular expression
+        </label>
+        <br><br>
+        <button type="submit" name="search">Search</button>
+    </form>
+
+    {% if search_results %}
+        <h2>Search Results</h2>
+        <ul>
+        {% for result in search_results %}
+            <li class="result-block">
+                <strong><a href="{{ result.url }}" target="_blank">{{ result.url }}</a></strong><br><br>
+                <iframe srcdoc="{{ result.html|safe }}"></iframe>
+            </li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+</body>
+
+</html>

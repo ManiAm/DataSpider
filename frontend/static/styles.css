@@ -1,0 +1,25 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 2em;
+}
+
+input[type="text"] {
+    width: 400px;
+    padding: 0.5em;
+    margin-right: 1em;
+}
+
+input[type="submit"],
+button {
+    padding: 0.5em 1em;
+}
+
+iframe {
+    width: 100%;
+    height: 500px;
+    border: 1px solid #ccc;
+}
+
+.result-block {
+    margin-bottom: 2em;
+}

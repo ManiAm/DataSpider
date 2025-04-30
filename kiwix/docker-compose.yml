@@ -1,0 +1,10 @@
+services:
+
+  kiwix:
+    build: .
+    container_name: kiwix_server
+    hostname: kiwix_server
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./zim_data:/data

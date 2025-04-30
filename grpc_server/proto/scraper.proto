@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service ScraperService {
+  rpc SubmitUrl (UrlRequest) returns (JobResponse);
+  rpc CheckStatus (JobRequest) returns (StatusResponse);
+}
+
+message UrlRequest {
+  string url = 1;
+  uint32 depth = 2;
+}
+
+message JobRequest {
+  string job_id = 1;
+}
+
+message JobResponse {
+  string job_id = 1;
+}
+
+message StatusResponse {
+  string status = 1;
+  string content = 2;
+}

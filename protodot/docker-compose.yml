@@ -1,0 +1,15 @@
+services:
+
+  # docker exec -it protodot bash
+  # protodot -src scraper.proto
+  # dot -Tpng output.dot -o scraper.png
+
+  protodot:
+    build: .
+    container_name: protodot
+    hostname: protodot
+    volumes:
+      - ./proto:/app
+    stdin_open: true
+    tty: true
+

@@ -1,0 +1,93 @@
+services:
+
+  redis_db_spider:
+    image: redis:7.4
+    container_name: redis_db_spider
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    networks:
+      - data_spider_network
+
+  elasticsearch:
+    image: elasticsearch:8.18.0
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m  # setting heap size to prevent Elasticsearch from consuming excessive system memory!
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - data_spider_network
+
+#######################################
+
+  grpc_server:
+    build: ./grpc_server
+    container_name: grpc_server
+    hostname: grpc_server
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis_db_spider:
+        condition: service_started
+    networks:
+      - data_spider_network
+
+  celery_worker:
+    build: ./celery_worker
+    container_name: celery_worker
+    hostname: celery_worker
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis_db_spider:
+        condition: service_started
+    networks:
+      - data_spider_network
+
+  frontend_spider:
+    build: ./frontend
+    container_name: frontend_spider
+    hostname: frontend_spider
+    ports:
+      - "5000:5000"
+    depends_on:
+      - grpc_server
+    networks:
+      - data_spider_network
+
+#######################################
+
+  celery_exporter:
+    build: ./celery_exporter
+    container_name: celery_exporter
+    hostname: celery_exporter
+    ports:
+      - "9808:9808"
+    depends_on:
+      - redis_db_spider
+    networks:
+      - data_spider_network
+    command: ["--broker-url=redis://redis_db_spider:6379/0"]
+
+#######################################
+
+networks:
+  data_spider_network:
+    driver: bridge

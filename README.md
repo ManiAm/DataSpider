@@ -85,7 +85,7 @@ To facilitate seamless communication with the gRPC backend, the proto/ subdirect
 
 ### Celery Exporter
 
-The celery_exporter folder includes a custom Dockerfile that builds a telemetry exporter for Celery, based on the open-source project [celery-exporter](https://github.com/danihodovic/celery-exporter). Designed for Prometheus integration, this exporter collects and exposes real-time Celery task metrics—such as execution counts, states, and latencies—via an HTTP endpoint on port 9808. This service enables robust observability and monitoring of Celery workloads within containerized environments.
+The celery_exporter folder includes a custom Dockerfile that builds a telemetry exporter for Celery, based on the open-source project [celery-exporter](https://github.com/danihodovic/celery-exporter). Designed for Prometheus integration, this exporter collects and exposes real-time Celery task metrics - such as execution counts, states, and latencies - via an HTTP endpoint on port 9808. This service enables robust observability and monitoring of Celery workloads within containerized environments.
 
 I configured Telegraf on the host to collect metrics from the Celery Prometheus exporter and store them in InfluxDB. These metrics are then visualized using Grafana for real-time monitoring and analysis of Celery task performance and worker health. The telemetry data indicates that a single Celery worker instance is running, configured with a concurrency level of four, resulting in four active worker processes.
 
@@ -93,17 +93,17 @@ I configured Telegraf on the host to collect metrics from the Celery Prometheus 
 
 ## Crawling Depth
 
-Crawling depth refers to how many layers of internal links a web scraper follows beyond the initial page. A depth of 1 means only the starting URL is scraped, while higher depths allow the scraper to explore and extract content from pages linked within the site, recursively. This is particularly useful for sites with nested structures—such as blogs, documentation, or e-commerce categories—where relevant data may reside several clicks away from the homepage. The system supports a configurable crawl depth, enabling users to control how deep the scraper should traverse, balancing content coverage with performance and resource usage.
+Crawling depth refers to how many layers of internal links a web scraper follows beyond the initial page. A depth of 1 means only the starting URL is scraped, while higher depths allow the scraper to explore and extract content from pages linked within the site, recursively. This is particularly useful for sites with nested structures - such as blogs, documentation, or e-commerce categories - where relevant data may reside several clicks away from the homepage. The system supports a configurable crawl depth, enabling users to control how deep the scraper should traverse, balancing content coverage with performance and resource usage.
 
 #### High-Depth Crawling Challenges
 
-As crawl depth increases, the number of pages visited can grow exponentially, especially on websites with dense internal linking. For example, a depth of 3 might mean hundreds or thousands of pages are visited if each page links to dozens of others. This surge in HTTP requests can quickly consume system resources—CPU, memory, and bandwidth—especially when scraping concurrently. It may also overload the target website's server, leading to slow responses or dropped connections.
+As crawl depth increases, the number of pages visited can grow exponentially, especially on websites with dense internal linking. For example, a depth of 3 might mean hundreds or thousands of pages are visited if each page links to dozens of others. This surge in HTTP requests can quickly consume system resources - CPU, memory, and bandwidth - especially when scraping concurrently. It may also overload the target website's server, leading to slow responses or dropped connections.
 
-Many websites implement anti-scraping measures such as rate limiting, IP bans, CAPTCHAs, or user-agent filtering. When a scraper sends too many requests in a short time—particularly at higher crawl depths—it increases the likelihood of detection. The site may respond with HTTP 429 (Too Many Requests), temporary blocks, or even permanent bans for specific IP addresses or user agents. This not only disrupts data collection but may also violate the site's terms of service. Hence, exercise caution when configuring a high crawl depth for a website
+Many websites implement anti-scraping measures such as rate limiting, IP bans, CAPTCHAs, or user-agent filtering. When a scraper sends too many requests in a short time - particularly at higher crawl depths - it increases the likelihood of detection. The site may respond with HTTP 429 (Too Many Requests), temporary blocks, or even permanent bans for specific IP addresses or user agents. This not only disrupts data collection but may also violate the site's terms of service. Hence, exercise caution when configuring a high crawl depth for a website
 
 #### High-Depth Crawling Resources
 
-The Scrapy community has provided two well-known sandbox websites for testing and demonstrating web scraping capabilities in a safe and controlled environment. [Quotes to Scrape](http://quotes.toscrape.com/) presents paginated quotes along with links to author detail pages, offering a practical scenario for implementing and validating multi-level crawling logic. [Books to Scrape](http://books.toscrape.com) mimics a real e-commerce bookstore and features structured product listings, category hierarchies, and deep navigation—making it ideal for testing recursive scraping, content extraction, and indexing workflows.
+The Scrapy community has provided two well-known sandbox websites for testing and demonstrating web scraping capabilities in a safe and controlled environment. [Quotes to Scrape](http://quotes.toscrape.com/) presents paginated quotes along with links to author detail pages, offering a practical scenario for implementing and validating multi-level crawling logic. [Books to Scrape](http://books.toscrape.com) mimics a real e-commerce bookstore and features structured product listings, category hierarchies, and deep navigation - making it ideal for testing recursive scraping, content extraction, and indexing workflows.
 
 Wikipedia offers publicly available database [dumps](https://dumps.wikimedia.org/) that can be downloaded and used to set up a local test instance of the encyclopedia. These dumps include the full content of Wikipedia articles, metadata, and revision history, enabling developers and researchers to work with large-scale, real-world text data in a controlled environment. Hosting a local instance is particularly useful for offline analysis, building custom search engines, or testing scraping and data processing tools without affecting the live Wikipedia site.
 
@@ -161,5 +161,26 @@ Open the scraping webpage from:
 
     http://localhost:5000/
 
+## Search
+
+Enter the word, phrase, or pattern you want to find in the indexed web content. Depending on the checkboxes you select below, the system will interpret your input as a keyword, exact phrase, or regular expression.
+
+<img src="pics/search.jpg" alt="segment" width="350">
+
+`Max results`: specifies the maximum number of results to return. Default is 10. You can increase this to retrieve more matching entries if needed. Keep in mind that each result includes the full HTML content of a page, so requesting a large number of results might return a significant amount of data.
+
+`Match whole word`: When checked, the search will return results that contain your input as complete words only. Partial matches (e.g., searching for "art" won't match "Martin") are excluded. This uses token-based matching to find distinct words. Search is case-insensitive.
+
+`Match exact phrase`: Enable this option to search for an exact sequence of words, in the correct order, just as you typed them. For example, searching for "Steve Martin" will only match results where those words appear together in that exact order. Search is case-insensitive.
+
+`Use regular expression`: Enable this to treat your search input as a regular expression pattern. This allows advanced pattern matching, such as wildcards or anchors. For example, **.*Martin$** would match any content ending with the word "Martin". You can use the `Match Case` field to control if regular expression is case-sensitive or not.
+
+`Match case`: When selected, the search becomes case-sensitive. That means "Glenn" and "glenn" are treated as different terms. Without this option, searches are case-insensitive by default.
+
+If no checkboxes are selected, the search performs a whole-word, case-insensitive match using the "OR" operator. This means the system will return results that contain any of the words you entered, regardless of order or capitalization. This provides the broadest and user-friendly search experience, ideal for general keyword lookups.
+
 ## Demo
 
+remove extra html at the beginning of each result
+
+fix highlight logic to match es output

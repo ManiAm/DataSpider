@@ -161,5 +161,26 @@ Open the scraping webpage from:
 
     http://localhost:5000/
 
+## Search
+
+Enter the word, phrase, or pattern you want to find in the indexed web content. Depending on the checkboxes you select below, the system will interpret your input as a keyword, exact phrase, or regular expression.
+
+<img src="pics/search.jpg" alt="segment" width="350">
+
+`Max results`: specifies the maximum number of results to return. Default is 10. You can increase this to retrieve more matching entries if needed. Keep in mind that each result includes the full HTML content of a page, so requesting a large number of results might return a significant amount of data.
+
+`Match whole word`: When checked, the search will return results that contain your input as complete words only. Partial matches (e.g., searching for "art" won't match "Martin") are excluded. This uses token-based matching to find distinct words. Search is case-insensitive.
+
+`Match exact phrase`: Enable this option to search for an exact sequence of words, in the correct order, just as you typed them. For example, searching for "Steve Martin" will only match results where those words appear together in that exact order. Search is case-insensitive.
+
+`Use regular expression`: Enable this to treat your search input as a regular expression pattern. This allows advanced pattern matching, such as wildcards or anchors. For example, **.*Martin$** would match any content ending with the word "Martin". You can use the `Match Case` field to control if regular expression is case-sensitive or not.
+
+`Match case`: When selected, the search becomes case-sensitive. That means "Glenn" and "glenn" are treated as different terms. Without this option, searches are case-insensitive by default.
+
+If no checkboxes are selected, the search performs a whole-word, case-insensitive match using the "OR" operator. This means the system will return results that contain any of the words you entered, regardless of order or capitalization. This provides the broadest and user-friendly search experience, ideal for general keyword lookups.
+
 ## Demo
 
+remove extra html at the beginning of each result
+
+fix highlight logic to match es output

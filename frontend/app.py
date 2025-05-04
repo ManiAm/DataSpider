@@ -121,6 +121,93 @@ def rewrite_relative_urls(html_code, base_url):
     return str(soup)
 
 
+def construct_es_query(form):
+
+    query = form["search_query"]
+    max_results = int(form.get("max_results", 10))
+
+    match_whole_word = "match_whole_word" in form
+    match_exact_phrase = "match_exact_phrase" in form
+    use_reg_exp = "use_reg_exp" in form
+    match_case = "match_case" in form
+
+    if use_reg_exp:
+
+        body = {
+            "query": {
+                "regexp": {
+                    "content": {
+                        "value": query,
+                        "case_insensitive": not match_case
+                    }
+                }
+            },
+            "size": max_results
+        }
+
+    elif match_whole_word:
+
+        # case insensitive
+
+        body = {
+            "query": {
+                "match": {
+                    "content": {
+                        "query": query,
+                        "operator": "and"
+                    }
+                }
+            },
+            "size": max_results
+        }
+
+    elif match_exact_phrase:
+
+        # case insensitive
+
+        body = {
+            "query": {
+                "match_phrase": {
+                    "content": query
+                }
+            },
+            "size": max_results
+        }
+
+    elif match_case:
+
+        # Exact Full-Field Match, Case-Sensitive
+        # Not Whole Word Match, Not Phrase Match
+
+        body = {
+            "query": {
+                "term": {
+                    "content.keyword": query
+                }
+            },
+            "size": max_results
+        }
+
+    else:
+
+        # Whole word match with "or" operator (case insensitive).
+        # This gives the broadest, most user-friendly behavior.
+
+        body = {
+            "query": {
+                "match": {
+                    "content": {
+                        "query": query,
+                        "operator": "or"
+                    }
+                }
+            },
+            "size": max_results
+        }
+
+    return body
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
 
@@ -146,31 +233,9 @@ def index():
 
         elif "search" in request.form:
 
+            body = construct_es_query(request.form)
+
             query = request.form["search_query"]
-            max_results = request.form["max_results"]
-
-            match_whole_word = "match_whole_word" in request.form
-            match_case = "match_case" in request.form
-            use_reg_exp = "use_reg_exp" in request.form
-
-            # curl -X POST http://localhost:9200/webpages/_search?pretty \
-            #   -H "Content-Type: application/json" \
-            #   -d '{
-            #     "query": {
-            #       "match": {
-            #         "content": "world"
-            #       }
-            #     }
-            #   }'
-
-            body = {
-                "query": {
-                    "match": {
-                        "content": query
-                    }
-                },
-                "size": int(max_results)
-            }
 
             if not es.indices.exists(index="webpages"):
                 return render_template("index.html")

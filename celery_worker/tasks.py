@@ -115,6 +115,8 @@ def crawl_finished(results, batch_id):
 @app.task
 def start_crawl(url, depth):
 
+    # create_ngram_index(es)
+
     batch_id = str(uuid.uuid4())
     print(f"Starting new crawl for '{url}' with depth {depth} and batch_id: '{batch_id}'", flush=True)
 
@@ -129,6 +131,53 @@ def start_crawl(url, depth):
         "chord_id": async_result.id,        # ID of the callback task
         "group_id": async_result.parent.id  # ID of the group of header tasks
     }
+
+
+def create_ngram_index(es_client, index_name="webpages"):
+
+    if es_client.indices.exists(index=index_name):
+        return
+
+    settings = {
+        "settings": {
+            "index": {
+                "max_ngram_diff": 10
+            },
+            "analysis": {
+                "tokenizer": {
+                    "ngram_tokenizer": {
+                        "type": "ngram",
+                        "min_gram": 3,
+                        "max_gram": 10,
+                        "token_chars": ["letter"]
+                    }
+                },
+                "analyzer": {
+                    "ngram_analyzer": {
+                        "type": "custom",
+                        "tokenizer": "ngram_tokenizer"
+                    }
+                }
+            }
+        },
+        "mappings": {
+            "properties": {
+                "url": {"type": "keyword"},
+                "domain": {"type": "keyword"},
+                "title": {"type": "text"},
+                "content": {
+                    "type": "text",
+                    "analyzer": "ngram_analyzer"
+                },
+                "html": {"type": "text"},
+                "timestamp": {"type": "date"}
+            }
+        }
+    }
+
+    es_client.indices.create(index=index_name, body=settings)
+
+    print(f"Index '{index_name}' created with ngram analyzer.", flush=True)
 
 
 def get_page_links_internal(soup, base_url, base_domain):

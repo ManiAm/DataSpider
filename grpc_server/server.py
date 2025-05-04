@@ -5,9 +5,9 @@
 
 import threading
 import grpc
-import json
 import datetime
 import time
+import redis
 from concurrent import futures
 from celery import Celery
 
@@ -19,6 +19,8 @@ celery_app = Celery(
     broker="redis://redis_db_spider:6379/0",
     backend="redis://redis_db_spider:6379/0"
 )
+
+rds = redis.Redis(host="redis_db_spider", port=6379, db=1)
 
 pending_jobs = set()
 pending_jobs_lock = threading.Lock()
@@ -74,7 +76,7 @@ class ScraperService(scraper_pb2_grpc.ScraperServiceServicer):
         depth = request.depth
         print(f"{ts}: Received SubmitUrl - url={url}, depth={depth}", flush=True)
 
-        job = celery_app.send_task("tasks.scrape_url", args=[url, depth])
+        job = celery_app.send_task("tasks.start_crawl", args=[url, depth])
 
         with pending_jobs_lock:
             pending_jobs.add(job.id)
@@ -88,8 +90,21 @@ class ScraperService(scraper_pb2_grpc.ScraperServiceServicer):
         print(f"{ts}: Received CheckStatus - job_id={job_id}", flush=True)
 
         result = celery_app.AsyncResult(job_id)
-        return scraper_pb2.StatusResponse(status=result.status, content=json.dumps(result.result))
+        if not result.ready():
+            return scraper_pb2.StatusResponse(status=result.state , content="")
 
+        try:
+
+            meta = result.get()
+            batch_id = meta.get("batch_id")
+
+            if rds.exists(f"active_crawl:{batch_id}"):
+                return scraper_pb2.StatusResponse(status="IN_PROGRESS", content=f"Crawl still running for batch_id '{batch_id}'")
+            else:
+                return scraper_pb2.StatusResponse(status="COMPLETE", content=f"Crawl completed for batch_id '{batch_id}'")
+
+        except Exception as e:
+            return scraper_pb2.StatusResponse(status="FAILURE", content=f"Task failed: {e}")
 
 def serve():
 

@@ -32,6 +32,10 @@
         </form>
     {% endif %}
 
+    {% if status %}
+        <pre>{{ status }}</pre>
+    {% endif %}
+
     {% if content %}
         <pre>{{ content }}</pre>
     {% endif %}
@@ -40,6 +44,9 @@
     <form method="POST">
         <input type="text" name="search_query" placeholder="Search content..." required>
         <br><br>
+        <label for="max_results">Max results</label><br>
+        <input type="number" id="max_results" name="max_results" min="1" value="10" required />
+        <br>
         <label>
             <input type="checkbox" name="match_whole_word"> Match whole word
         </label>
@@ -56,11 +63,11 @@
     </form>
 
     {% if search_results %}
-        <h2>Search Results</h2>
+        <h2>Search Results ({{ results_count }})</h2>
         <ul>
         {% for result in search_results %}
             <li class="result-block">
-                <strong><a href="{{ result.url }}" target="_blank">{{ result.url }}</a></strong><br><br>
+                <strong><a href="{{ result.url | e }}" target="_blank">{{ result.url }}</a></strong> - Indexed at: {{ result.timestamp }}<br><br>
                 <iframe srcdoc="{{ result.html|safe }}"></iframe>
             </li>
         {% endfor %}

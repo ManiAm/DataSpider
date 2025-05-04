@@ -15,7 +15,6 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy the protodot binary from the builder stage
 COPY --from=builder /app/protodot /usr/local/bin/protodot
 
 CMD ["bash"]

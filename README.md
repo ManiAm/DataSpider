@@ -1,6 +1,6 @@
 # Distributed Web Scraper
 
-DataSpider is a distributed web scraping platform designed to extract, process, and search web content asynchronously. It uses gRPC for task submission, Celery for asynchronous task processing, and Elasticsearch for indexing scraped content. The frontend provides a simple UI to submit jobs, check their status, and search across previously scraped content with highlighted results rendered safely in sand-boxed iframes. The system supports configurable crawl depth, allowing it to recursively follow internal links up to a specified depth, enabling deep content discovery within target sites.
+DataSpider is a distributed web scraping platform designed to extract, process, and search web content asynchronously. It uses gRPC for task submission, Celery for asynchronous task processing, and Elasticsearch for indexing scraped content. The frontend provides a simple UI to submit jobs, check their status, and search across previously scraped content with highlighted results rendered safely in sand-boxed `iframes`. The system supports configurable crawl depth, allowing it to recursively follow internal links up to a specified depth, enabling deep content discovery within target sites.
 
 ## System Architecture
 
@@ -44,9 +44,9 @@ These methods are specified in the `scraper.proto` protocol buffer file. The `se
 
 ### Celery Worker
 
-Celery is a distributed task queue system that enables asynchronous execution of time-consuming or parallelizable tasks using worker processes. It is widely used for background job processing in web applications, supporting various messaging brokers like Redis or RabbitMQ to queue and dispatch tasks. It allows developers to scale workloads across multiple machines or containers, improving responsiveness and throughput.
+Celery is a distributed `task queue` system that enables asynchronous execution of time-consuming or parallelizable tasks using worker processes. It is widely used for background job processing in web applications, supporting various messaging brokers like Redis or RabbitMQ to queue and dispatch tasks. It allows developers to scale workloads across multiple machines or containers, improving responsiveness and throughput.
 
-Upon startup, the worker connects to a Redis message broker and listens for incoming tasks. It is configured with a concurrency level of 4 using the prefork model, where the main process forks four child processes in advance to handle tasks concurrently. Prefork is Celery's default and most robust execution pool, offering strong performance and isolation, especially for CPU-bound or blocking operations.
+Upon startup, the worker connects to a Redis message broker and listens for incoming tasks. It is configured with a concurrency level of 4 (number of logical CPUs) using the prefork model, where the main process forks four child processes in advance to handle tasks concurrently. Prefork is Celery's default and most robust execution pool, offering strong performance and isolation, especially for CPU-bound or blocking operations. Note that Celery successfully detected and registered all the defined tasks.
 
 ```text
  -------------- celery@celery_worker v5.5.2 (immunity)
@@ -64,7 +64,10 @@ Upon startup, the worker connects to a Redis message broker and listens for inco
                 .> celery           exchange=celery(direct) key=celery
 
 [tasks]
+  . tasks.crawl_finished
+  . tasks.process_scraped_links
   . tasks.scrape_url
+  . tasks.start_crawl
 
 [2025-05-01 21:25:29,904: INFO/MainProcess] Connected to redis://redis_db_spider:6379/0
 [2025-05-01 21:25:29,912: INFO/MainProcess] mingle: searching for neighbors
@@ -76,7 +79,7 @@ The accompanying Dockerfile creates a self-contained environment with all necess
 
 ### Frontend
 
-The frontend directory implements the web-based user interface for interacting with the scraper system. Developed using Flask, the app.py script manages user input, URL submission, job status retrieval, and search functionality. It securely renders scraped content using sand-boxed iframes to isolate untrusted HTML.
+The frontend directory implements the web-based user interface for interacting with the scraper system. Developed using Flask, the app.py script manages user input, URL submission, job status retrieval, and search functionality. It securely renders scraped content using sand-boxed `iframes` to isolate untrusted HTML.
 
 To facilitate seamless communication with the gRPC backend, the proto/ subdirectory contains a shared copy of the `scraper.proto` file. This ensures consistent message formats between the gRPC server and client components, allowing the frontend to invoke backend services reliably via gRPC calls.
 
@@ -121,22 +124,42 @@ You can now access the Wikipedia files locally from:
 
     http://localhost:8081
 
-## `scrape_url` Celery Task
+## Celery Tasks
 
-The celery_worker directory contains the asynchronous worker service responsible for executing distributed scraping tasks, specifically the `scrape_url` task. This task encapsulates the core scraping logic, including fetching web pages, extracting both textual and structural content, recursively traversing internal links for deep scraping, and indexing the processed results into Elasticsearch for efficient search and retrieval.
+This project defines the following Celery tasks within the celery_worker service:
 
-In the gRPC server, Celery tasks are invoked dynamically by name using the `send_task` method. This approach allows the server to dispatch jobs to distributed worker processes without a direct code-level dependency on the task definitions. Specifically, the line:
+- tasks.start_crawl
+- tasks.scrape_url
+- tasks.process_scraped_links
+- tasks.crawl_finished
+
+`start_crawl` is the entry-point task that initiates a new web scraping job. It receives a root URL and crawl depth, orchestrates the scraping process by generating initial `scrape_url` tasks, and links them using a Celery chord with `process_scraped_links` as the callback. It ensures that the crawl is traceable by assigning a unique `batch_id`. The gRPC server triggers `start_crawl` task dynamically using the `send_task` method, enabling decoupled execution without hardcoding task imports.
 
 ```python
-job = celery_app.send_task("tasks.scrape_url", args=[request.url])
+job = celery_app.send_task("tasks.start_crawl", args=[request.url, request.depth])
 ```
 
-TODO:
+Each `scrape_url` task is responsible for retrieving a web page, parsing its content to extract both clean text and full HTML, and identifying internal links for further traversal. To avoid redundant visits to the same URL, a Redis-backed set is used to track already-scraped links. Parsed data is indexed into Elasticsearch to enable efficient full-text search, filtering, and result highlighting.
 
-added crawl depth config
+`crawl_finished` is the final callback task that runs when all recursive crawling and link processing is complete. It can log crawl summary, update metadata in the database, notify external services (e.g., via webhook), or mark the crawl job as "completed" in a tracking system.
 
-Each page is parsed to extract both clean text and full HTML, which is indexed in Elasticsearch to support full-text search, filtering, and result highlighting.
+## Getting Started
 
+Clone the repository and go into the project root directory:
+
+```bash
+cd DataSpider
+```
+
+Build and run all containers:
+
+```bash
+docker compose up --build
+```
+
+Open the scraping webpage from:
+
+    http://localhost:5000/
 
 ## Demo
 

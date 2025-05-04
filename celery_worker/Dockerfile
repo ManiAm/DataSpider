@@ -20,4 +20,4 @@ WORKDIR /app
 
 COPY tasks.py .
 
-CMD ["celery", "-A", "tasks", "worker", "--loglevel=info"]
+CMD ["celery", "-A", "tasks", "worker", "--loglevel=WARNING"]

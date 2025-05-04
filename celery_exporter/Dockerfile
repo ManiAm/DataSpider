@@ -30,7 +30,6 @@ ENV PYTHONUNBUFFERED=1 \
     VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
-# Copy installed virtualenv and source code
 COPY --from=builder /app /app
 
 EXPOSE 9808

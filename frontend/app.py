@@ -141,46 +141,67 @@ def index():
         elif "check" in request.form:
 
             job_id = request.form["job_id"]
-            status = stub.CheckStatus(scraper_pb2.JobRequest(job_id=job_id))
-            content = status.content
-            return render_template("index.html", job_id=job_id, content=content)
+            result = stub.CheckStatus(scraper_pb2.JobRequest(job_id=job_id))
+            return render_template("index.html", job_id=job_id, status=result.status, content=result.content)
 
         elif "search" in request.form:
 
             query = request.form["search_query"]
+            max_results = request.form["max_results"]
 
             match_whole_word = "match_whole_word" in request.form
             match_case = "match_case" in request.form
             use_reg_exp = "use_reg_exp" in request.form
+
+            # curl -X POST http://localhost:9200/webpages/_search?pretty \
+            #   -H "Content-Type: application/json" \
+            #   -d '{
+            #     "query": {
+            #       "match": {
+            #         "content": "world"
+            #       }
+            #     }
+            #   }'
 
             body = {
                 "query": {
                     "match": {
                         "content": query
                     }
-                }
+                },
+                "size": int(max_results)
             }
+
+            if not es.indices.exists(index="webpages"):
+                return render_template("index.html")
 
             results = es.search(index="webpages", body=body)
 
-            search_results = []
+            results_count = results["hits"]["total"]["value"]
             hits = results["hits"]["hits"]
+
+            search_results = []
 
             for r in hits:
 
                 url = r["_source"]["url"]
                 raw_html = r["_source"].get("html", "")
+                timestamp = r["_source"].get("timestamp")
 
                 processed_html = prepare_html_for_srcdoc(raw_html, query, url)
 
                 search_results.append({
                     "url": url,
-                    "html": processed_html
+                    "html": processed_html,
+                    "timestamp": timestamp
                 })
 
             search_results.sort(key=lambda x: (x["url"], len(x["url"])))
 
-            return render_template("index.html", search_results=search_results, search_query=query)
+            return render_template("index.html",
+                                   results_count=results_count,
+                                   search_results=search_results,
+                                   search_query=query)
 
         else:
 

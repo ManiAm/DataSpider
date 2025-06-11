@@ -1,6 +1,12 @@
 # Distributed Web Scraper
 
-DataSpider is a distributed web scraping platform designed to extract, process, and search web content asynchronously. It uses gRPC for task submission, Celery for asynchronous task processing, and Elasticsearch for indexing scraped content. The frontend provides a simple UI to submit jobs, check their status, and search across previously scraped content with highlighted results rendered safely in sand-boxed `iframes`. The system supports configurable crawl depth, allowing it to recursively follow internal links up to a specified depth, enabling deep content discovery within target sites.
+DataSpider is a distributed web scraping platform designed to extract, process, and search web content asynchronously. It uses:
+
+- gRPC for task submission
+- Celery for asynchronous task processing
+- Elasticsearch for indexing scraped content
+
+The frontend provides a simple UI to submit jobs, check their status, and search across previously scraped content with highlighted results rendered safely in sand-boxed `iframes`. The system supports configurable crawl depth, allowing it to recursively follow internal links up to a specified depth, enabling deep content discovery within target sites.
 
 ## System Architecture
 
@@ -126,14 +132,16 @@ You can now access the Wikipedia files locally from:
 
 ## Celery Tasks
 
-This project defines the following Celery tasks within the celery_worker service:
+We have defined the following Celery tasks within the celery_worker service:
 
 - tasks.start_crawl
 - tasks.scrape_url
 - tasks.process_scraped_links
 - tasks.crawl_finished
 
-`start_crawl` is the entry-point task that initiates a new web scraping job. It receives a root URL and crawl depth, orchestrates the scraping process by generating initial `scrape_url` tasks, and links them using a Celery chord with `process_scraped_links` as the callback. It ensures that the crawl is traceable by assigning a unique `batch_id`. The gRPC server triggers `start_crawl` task dynamically using the `send_task` method, enabling decoupled execution without hardcoding task imports.
+`start_crawl` is the entry-point task that initiates a new web scraping job. It receives a root URL and crawl depth, orchestrates the scraping process by generating initial `scrape_url` tasks, and links them using a Celery chord with `process_scraped_links` as the callback. It ensures that the crawl is traceable by assigning a unique `batch_id`.
+
+The gRPC server triggers `start_crawl` task dynamically using the `send_task` method, enabling decoupled execution without hardcoding task imports.
 
 ```python
 job = celery_app.send_task("tasks.start_crawl", args=[request.url, request.depth])
@@ -151,15 +159,25 @@ Clone the repository and go into the project root directory:
 cd DataSpider
 ```
 
-Build and run all containers:
+Build Docker images:
 
 ```bash
-docker compose up --build
+docker compose build
+```
+
+Run all containers in the background:
+
+```bash
+docker compose up -d
 ```
 
 Open the scraping webpage from:
 
     http://localhost:5000/
+
+Enter the target URL and crawling depth and click on Submit.
+
+Be careful when setting a website to crawl. This crawler sends a torrent of requests to the target site, which can trigger rate limits, get your IP blocked, or even violate the website’s terms of service. Crawling certain sites without permission may be illegal depending on the jurisdiction. Always check the site's `robots.txt` and ensure you have the right to scrape its content.
 
 ## Search
 
